@@ -19,7 +19,7 @@ def get_parks(state_code):
     return parks
 
 def main():
-    state_code = "NJ"
+    state_code = "CO"
     parks = get_parks(state_code)
     cords_lst =[]
     #print(f"National Parks in {state_code}:")
