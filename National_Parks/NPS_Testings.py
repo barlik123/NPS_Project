@@ -1,6 +1,62 @@
 import requests
 from Maps_Testing import *
 from Keys import NPS_API_KEY
+import geopandas as gpd
+from shapely.geometry import Point
+
+states_codes_names = {
+    'AL': 'Alabama',
+    'AK': 'Alaska',
+    'AZ': 'Arizona',
+    'AR': 'Arkansas',
+    'CA': 'California',
+    'CO': 'Colorado',
+    'CT': 'Connecticut',
+    'DE': 'Delaware',
+    'FL': 'Florida',
+    'GA': 'Georgia',
+    'HI': 'Hawaii',
+    'ID': 'Idaho',
+    'IL': 'Illinois',
+    'IN': 'Indiana',
+    'IA': 'Iowa',
+    'KS': 'Kansas',
+    'KY': 'Kentucky',
+    'LA': 'Louisiana',
+    'ME': 'Maine',
+    'MD': 'Maryland',
+    'MA': 'Massachusetts',
+    'MI': 'Michigan',
+    'MN': 'Minnesota',
+    'MS': 'Mississippi',
+    'MO': 'Missouri',
+    'MT': 'Montana',
+    'NE': 'Nebraska',
+    'NV': 'Nevada',
+    'NH': 'New Hampshire',
+    'NJ': 'New Jersey',
+    'NM': 'New Mexico',
+    'NY': 'New York',
+    'NC': 'North Carolina',
+    'ND': 'North Dakota',
+    'OH': 'Ohio',
+    'OK': 'Oklahoma',
+    'OR': 'Oregon',
+    'PA': 'Pennsylvania',
+    'RI': 'Rhode Island',
+    'SC': 'South Carolina',
+    'SD': 'South Dakota',
+    'TN': 'Tennessee',
+    'TX': 'Texas',
+    'UT': 'Utah',
+    'VT': 'Vermont',
+    'VA': 'Virginia',
+    'WA': 'Washington',
+    'WV': 'West Virginia',
+    'WI': 'Wisconsin',
+    'WY': 'Wyoming',
+}
+
 
 def get_parks(state_code):
     """
@@ -18,17 +74,33 @@ def get_parks(state_code):
     parks = data["data"]
     return parks
 
+def is_point_in_state(lat, lon, state_name):
+    # Load the US States geometry
+    # file I find on the internet, probably a good idea to find something else later
+    us_states = gpd.read_file('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
+
+    # Create a point with your coordinates
+    point = Point(lon, lat)
+
+    # Get the geometry of the state from the GeoDataFrame
+    state_geom = us_states.loc[us_states['name'] == state_name, 'geometry'].values[0]
+
+    # Check if the point is within the state geometry
+    return point.within(state_geom)
+
+
 def main():
-    state_code = "CO"
+    state_code = "CA"
     parks = get_parks(state_code)
     cords_lst =[]
     #print(f"National Parks in {state_code}:")
     #for key, value in parks[0].items():
     #    print(f"'{key}':   '{value}'\n")
     for park in parks:
-        cords_lst.append((float(park['latitude']),float(park['longitude'])))
-        print(f"- {park['fullName']} ({park['designation']}):\n {park['description']}\n\
-        {park['latitude']}, {park['longitude']}\n")
+        if is_point_in_state(park['latitude'], park['longitude'], states_codes_names[state_code]):
+            cords_lst.append((float(park['latitude']),float(park['longitude'])))
+            print(f"- {park['fullName']} ({park['designation']}):\n {park['description']}\n\
+            {park['latitude']}, {park['longitude']}\n")
 
     # Generate the map
     map_obj = plot_coordinates(cords_lst)
