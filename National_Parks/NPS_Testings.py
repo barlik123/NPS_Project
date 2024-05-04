@@ -58,30 +58,47 @@ states_codes_names = {
 }
 
 
-def get_parks(state_code):
+def get_parks(state_code=None):
     """
-    Function to get a list of national parks in a specific state.
+    Retrieves all national parks, optionally filtered by a specific state.
     
     Parameters:
-    - state_code (str): The two-letter state code (e.g., "CA" for California).
-    
-    Returns:
-    - List of dictionaries, where each dictionary represents information about a national park.
+    - state_code (str, optional): Two-letter state code to filter parks by a specific state.
     """
-    api_url = f"https://developer.nps.gov/api/v1/parks?stateCode={state_code}&api_key={NPS_API_KEY}"
-    response = requests.get(api_url)
-    data = response.json()
-    parks = data["data"]
-    return parks
+    api_base_url = "https://developer.nps.gov/api/v1/parks?"
+    all_parks = []
+    start = 0
+    limit = 50  # Adjust based on what the API supports; 50 is a common limit
+    total_parks = None
+
+    while True:
+        api_url = f"{api_base_url}start={start}&limit={limit}&api_key={NPS_API_KEY}"
+        if state_code:
+            api_url += f"&stateCode={state_code}"
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()
+            data = response.json()
+            all_parks.extend(data['data'])
+            # Check if total parks count is known, update if not
+            if total_parks is None:
+                total_parks = int(data['total'])
+            # Update start for next page
+            start += limit
+            if start >= total_parks:
+                break
+        except requests.RequestException as e:
+            print(f"Request failed: {e}")
+            break
+
+    return all_parks
 
 def is_point_in_state(lat, lon, state_name):
     # Load the US States geometry
     # file I find on the internet, probably a good idea to find something else later
     us_states = gpd.read_file('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
-
     # Create a point with your coordinates
     point = Point(lon, lat)
-
     # Get the geometry of the state from the GeoDataFrame
     state_geom = us_states.loc[us_states['name'] == state_name, 'geometry'].values[0]
 
@@ -90,23 +107,23 @@ def is_point_in_state(lat, lon, state_name):
 
 
 def main():
-    state_code = "CA"
+    state_code = input("Enter a state code to filter by (or leave blank for all parks): ").strip().upper()
+    if state_code == "":
+        state_code = None
+
+    map_obj = folium.Map(location=[39.828156, -98.579362], zoom_start=5)
     parks = get_parks(state_code)
-    cords_lst =[]
-    #print(f"National Parks in {state_code}:")
-    #for key, value in parks[0].items():
-    #    print(f"'{key}':   '{value}'\n")
-    for park in parks:
-        if is_point_in_state(park['latitude'], park['longitude'], states_codes_names[state_code]):
-            cords_lst.append((float(park['latitude']),float(park['longitude'])))
-            print(f"- {park['fullName']} ({park['designation']}):\n {park['description']}\n\
-            {park['latitude']}, {park['longitude']}\n")
+    if state_code:
+        parks = get_parks(state_code)
+        for park in parks:
+            if is_point_in_state(park['latitude'], park['longitude'], states_codes_names[state_code]):
+                create_marker(map_obj,park['latitude'],park['longitude'],park['fullName'])
+    else:
+        parks = get_parks()
+        for park in parks:
+            create_marker(map_obj,park['latitude'],park['longitude'],park['fullName'])
 
-    # Generate the map
-    map_obj = plot_coordinates(cords_lst)
-
-    # Save the map to an HTML file
-    map_obj.save(f'{state_code}.html')
+    map_obj.save(f'{state_code or "ALL_STATES"}.html')
 
 if __name__ == "__main__":
     main()
