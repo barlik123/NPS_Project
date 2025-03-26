@@ -3,7 +3,7 @@ This Project uses folium, geopandas, and the national parks api to map national 
 To use this program you will need to generate your own National Parks api key, to do so check out this website:
 https://www.nps.gov/subjects/developer/get-started.htm
 
-You will also need to setup folium and geopandas, you can load them with this command:
+You will also need to setup folium and geopandas, you can load them with this command: \n
 pip install geopandas
 pip install folium
 
