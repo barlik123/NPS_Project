@@ -1,5 +1,5 @@
 import requests
-import marker
+from marker import *
 from Keys import NPS_API_KEY
 import geopandas as gpd
 from shapely.geometry import Point
@@ -111,7 +111,6 @@ def main():
         state_code = None
 
     map_obj = folium.Map(location=[39.828156, -98.579362], zoom_start=5)
-    parks = get_parks(state_code)
     if state_code:
         parks = get_parks(state_code)
         for park in parks:
